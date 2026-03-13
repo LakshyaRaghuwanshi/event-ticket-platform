@@ -9,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -27,11 +28,11 @@ public class Event {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "start")
-    private LocalDateTime start;
+    @Column(name = "start_time")
+    private LocalDateTime startTime;
 
-    @Column(name = "end")
-    private LocalDateTime end;
+    @Column(name = "end_time")
+    private LocalDateTime endTime;
 
     @Column(name = "venue", nullable = false)
     private String venue;
@@ -67,4 +68,15 @@ public class Event {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Event event = (Event) o;
+        return Objects.equals(id, event.id) && Objects.equals(name, event.name) && Objects.equals(startTime, event.startTime) && Objects.equals(endTime, event.endTime) && Objects.equals(venue, event.venue) && Objects.equals(salesStartDate, event.salesStartDate) && Objects.equals(salesEndDate, event.salesEndDate) && status == event.status && Objects.equals(createdAt, event.createdAt) && Objects.equals(updatedAt, event.updatedAt);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, startTime, endTime, venue, salesStartDate, salesEndDate, status, createdAt, updatedAt);
+    }
 }
