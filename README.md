@@ -1,4 +1,4 @@
-# Event Ticket Platform v1
+# Event Ticket Platform - V1
 
 A full-lifecycle event ticketing backend built with **Spring Boot 4**, **PostgreSQL**, and **Keycloak**. This is the first iteration of the platform, covering system design, domain modelling, REST API design, and the complete backend implementation.
 
@@ -12,6 +12,7 @@ A full-lifecycle event ticketing backend built with **Spring Boot 4**, **Postgre
 - [Project Structure](#project-structure)
 - [Domain Model](#domain-model)
 - [REST API](#rest-api)
+- [Diagrams](#diagrams)
 - [Infrastructure](#infrastructure)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
@@ -40,7 +41,7 @@ The system serves three user types:
 
 ### Event Management
 - Full CRUD for events (create, list, retrieve, update, delete)
-- Organizer-scoped access — organizers only see and manage their own events
+- Organizer-scoped access - organizers only see and manage their own events
 - Paginated event listing via Spring Data `Pageable`
 - Event status tracking via `EventStatusEnum`
 - Multiple ticket types per event with individual pricing and quantity limits
@@ -216,6 +217,135 @@ All endpoints are versioned under `/api/v1`. All requests require a valid Keyclo
 |---|---|---|
 | `POST` | `/api/v1/events/{eventId}/ticket-validations` | Submit a ticket validation |
 | `GET` | `/api/v1/events/{eventId}/ticket-validations` | List validations for an event |
+---
+
+## Diagrams
+
+### ER / Schema Diagram
+
+```mermaid
+erDiagram
+  USER {
+    UUID id PK
+    STRING name
+    STRING email
+  }
+  EVENT {
+    UUID id PK
+    UUID organizerId FK
+    STRING name
+    DATE date
+    TIME time
+    STRING venue
+    DATE salesEndDate
+    ENUM status
+  }
+  TICKET_TYPE {
+    UUID id PK
+    UUID eventId FK
+    STRING name
+    DECIMAL price
+    INT totalAvailable
+  }
+  TICKET {
+    UUID id PK
+    UUID ticketTypeId FK
+    UUID userId FK
+    ENUM status
+    TIMESTAMP createdDateTime
+  }
+  QR_CODE {
+    UUID id PK
+    UUID ticketId FK
+    TIMESTAMP generatedDateTime
+    ENUM status
+  }
+  TICKET_VALIDATION {
+    UUID id PK
+    UUID ticketId FK
+    TIMESTAMP validationTime
+    ENUM validationMethod
+    ENUM status
+  }
+
+  USER ||--o{ EVENT : "organizes"
+  USER ||--o{ TICKET : "purchases"
+  EVENT ||--o{ TICKET_TYPE : "has"
+  TICKET_TYPE ||--o{ TICKET : "sold as"
+  TICKET ||--|| QR_CODE : "has"
+  TICKET ||--o{ TICKET_VALIDATION : "validated by"
+```
+
+### System Architecture
+
+```mermaid
+graph TD
+  Client["API Client (Bearer JWT)"]
+  App["Spring Boot API :8080"]
+  KC["Keycloak :9090"]
+  PG["PostgreSQL :5432"]
+  AD["Adminer :8889"]
+
+  Client -->|REST /api/v1| App
+  App -->|Validate JWT via JWKS| KC
+  App -->|JPA / SQL| PG
+  AD -->|DB UI| PG
+
+  subgraph Docker Compose
+    KC
+    PG
+    AD
+  end
+```
+
+### Ticket Purchase Flow
+
+```mermaid
+flowchart TD
+  A["POST /published-events/{eventId}/ticket-types/{id}"]
+  B["Security filter chain\nJWT validated via Keycloak"]
+  C["UserProvisioningFilter\nUpsert user from JWT into DB"]
+  D["PublishedEventController\nExtract userId from JWT"]
+  E["TicketServiceImpl\nCheck inventory"]
+  F["QrCodeServiceImpl\nGenerate QR via ZXing"]
+  G["PostgreSQL\nTicket + QrCode saved"]
+
+  A --> B
+  B -->|401 if invalid| STOP1[ ]
+  B --> C
+  C --> D
+  D --> E
+  E -->|409 if sold out| STOP2[ ]
+  E --> F
+  F --> G
+
+  style STOP1 fill:none,stroke:none
+  style STOP2 fill:none,stroke:none
+```
+
+### Auth Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant API as Spring Boot API
+  participant KC as Keycloak :9090
+
+  Client->>KC: POST /realms/event-ticket-platform/protocol/openid-connect/token
+  KC-->>Client: access_token (JWT) + refresh_token
+
+  Client->>API: API request + Authorization: Bearer <JWT>
+  API->>KC: Fetch JWKS (startup / cache miss)
+  KC-->>API: RSA public key
+
+  API->>API: JwtAuthenticationConverter - extract roles
+  API->>API: UserProvisioningFilter - upsert user into DB
+  API->>API: SecurityConfig - role-based access check
+
+  alt Invalid or expired JWT
+    API-->>Client: 401 Unauthorized
+  end
+```
 
 ---
 
