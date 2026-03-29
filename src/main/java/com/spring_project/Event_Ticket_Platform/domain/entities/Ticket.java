@@ -1,6 +1,6 @@
 package com.spring_project.Event_Ticket_Platform.domain.entities;
 
-import com.spring_project.Event_Ticket_Platform.domain.TicketStatusEnum;
+import com.spring_project.Event_Ticket_Platform.domain.enums.TicketStatusEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;

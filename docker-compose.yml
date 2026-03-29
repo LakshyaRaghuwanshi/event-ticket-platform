@@ -1,20 +1,21 @@
 services:
-  # Our postgreSQL database
   db:
-    # Using the latest postgreSQL image
     image: postgres:latest
+    restart: always
     ports:
       - "5432:5432"
-    restart: always
     environment:
       POSTGRES_PASSWORD: changemeinprod!
+    networks:
+      - app-network
 
-  # Database management interface
   adminer:
     image: adminer:latest
     restart: always
     ports:
-      - "8888:8080"
+      - "8889:8080"
+    networks:
+      - app-network
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -28,6 +29,12 @@ services:
     command:
       - start-dev
       - --db=dev-file
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   keycloak-data:

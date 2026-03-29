@@ -17,7 +17,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @Setter
-@Builder
 public class User {
     @Id
     @Column(name = "id", updatable = false, nullable = false)
